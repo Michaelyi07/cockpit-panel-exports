@@ -52,7 +52,10 @@ def upgrade() -> None:
         sa.Column("resource_type", sa.String(32), nullable=False),
         sa.Column("resource_id", sa.String(64), nullable=False),
         sa.Column("detail", postgresql.JSONB, nullable=False, server_default="{}"),
+        sa.Column("created_by", sa.String(64), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_audit_resource", "audit_log", ["resource_type", "resource_id"])
 
@@ -65,9 +68,11 @@ def upgrade() -> None:
         sa.Column("metric_code", sa.String(48), nullable=False),
         sa.Column("dimension", postgresql.JSONB, nullable=False, server_default="{}"),
         sa.Column("period", sa.String(10), nullable=False),
-        sa.Column("value_num", sa.Numeric, nullable=True),
+        sa.Column("value_num", sa.Float, nullable=True),
         sa.Column("value_cents", sa.Integer, nullable=True),
+        sa.Column("created_by", sa.String(64), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_fact_panel_metric_period", "dashboard_fact",

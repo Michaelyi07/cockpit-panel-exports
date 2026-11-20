@@ -46,16 +46,35 @@ def test_watermark_written_to_every_sheet_header(client):
     wb = load_workbook(io.BytesIO(data))
     for sheet_name in wb.sheetnames:
         sheet = wb[sheet_name]
+        # cell banner (kept) ...
         assert sheet.cell(row=1, column=1).value == f"Watermark: {detail['watermark']}"
+        # ... and the real print header (oddHeader), per the brief
+        assert detail["watermark"] in (sheet.oddHeader.center.text or "")
 
 
-def test_watermark_collision_regenerates(client):
-    """Force a watermark collision by pre-inserting the next watermark the
-    generator would produce; the generator must regenerate a distinct one
-    instead of duplicating."""
-    import re
-    from datetime import datetime, timezone
+def test_watermark_written_to_print_header_when_detail_sheet_present(client):
+    """Every sheet — including the detail roster — must carry the watermark
+    in its print header, not only in cells/properties."""
+    from app.worker import process_pending as _process
+    from tests.conftest import MANAGER
 
+    resp = client.post("/api/dash/exports", json={
+        "panel": "revenue", "include_detail": True,
+        "filters": {"site_id": "00000000-0000-0000-0000-000000000001"}},
+        headers=ANALYST)
+    export = resp.json()
+    client.post(f"/api/dash/exports/{export['id']}/approve", headers=MANAGER)
+    assert _process() >= 1
+
+    detail = client.get(f"/api/dash/exports/{export['id']}", headers=ANALYST).json()
+    wb = load_workbook(io.BytesIO(client.get(detail["download_url"]).content))
+    assert "Detail List" in wb.sheetnames
+    for sheet_name in wb.sheetnames:
+        assert detail["watermark"] in (wb[sheet_name].oddHeader.center.text or "")
+
+
+def test_duplicate_watermark_rejected_by_db_index(client):
+    """The partial unique index on dash_export.watermark rejects duplicates."""
     from sqlalchemy import create_engine, text
 
     detail = _create_and_generate(client)
@@ -85,3 +104,38 @@ def test_watermark_collision_regenerates(client):
     # and a fresh export still gets its own distinct watermark
     second = _create_and_generate(client)
     assert second["watermark"] != existing
+
+
+def test_generate_watermark_retries_on_collision(client, monkeypatch):
+    """The generator's MAX_ATTEMPTS retry loop really regenerates when a
+    candidate watermark already exists in the DB (not just the DB index)."""
+    import types
+
+    from app import watermark as wm_mod
+    from app.db import SessionLocal
+
+    detail = _create_and_generate(client)
+    taken = detail["watermark"]
+    taken_suffix = taken.rsplit("-", 1)[1]
+
+    class _FakeUUID:
+        def __init__(self, hex_value):
+            self.hex = hex_value  # real uuid.UUID.hex is a str attribute
+
+    # force a deterministic collision: first call yields the already-used
+    # suffix, subsequent calls yield a fresh one.
+    calls = {"n": 0}
+
+    def fake_uuid4():
+        calls["n"] += 1
+        suffix = taken_suffix if calls["n"] == 1 else "abcdef12"
+        # generate_watermark slices hex[:8], so put the suffix up front
+        return _FakeUUID(suffix + "0" * 24)
+
+    monkeypatch.setattr(wm_mod.uuid, "uuid4", fake_uuid4)
+    with SessionLocal() as session:
+        result = wm_mod.generate_watermark(session)
+
+    assert calls["n"] == 2, "generator must retry after the first collision"
+    assert result.endswith("abcdef12")
+    assert result != taken

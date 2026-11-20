@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -56,11 +56,11 @@ class DashExport(Base, SoftDeleteMixin):
     __table_args__ = (
         Index("ix_dash_export_org_status", "org_id", "status"),
         Index("ix_dash_export_watermark", "watermark", unique=True,
-              postgresql_where=Text("watermark IS NOT NULL AND deleted_at IS NULL")),
+              postgresql_where=text("watermark IS NOT NULL AND deleted_at IS NULL")),
     )
 
 
-class AuditLog(Base):
+class AuditLog(Base, SoftDeleteMixin):
     __tablename__ = "audit_log"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
@@ -71,7 +71,13 @@ class AuditLog(Base):
     resource_type: Mapped[str] = mapped_column(String(32), nullable=False)
     resource_id: Mapped[str] = mapped_column(String(64), nullable=False)
     detail: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)
+
+    __table_args__ = (
+        Index("ix_audit_resource", "resource_type", "resource_id"),
+    )
 
 
 class DashboardFact(Base, SoftDeleteMixin):
@@ -88,6 +94,8 @@ class DashboardFact(Base, SoftDeleteMixin):
     period: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-DD
     value_num: Mapped[float | None] = mapped_column(nullable=True)
     value_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)
 
     __table_args__ = (Index("ix_fact_panel_metric_period", "panel", "metric_code", "period"),)

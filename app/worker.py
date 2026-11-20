@@ -47,7 +47,7 @@ def _generate(session, row: DashExport) -> None:
         rows = collect_rows(session, panel=row.panel, filters=row.filters or {})
         watermark = generate_watermark(session, row.org_id)
         data = render(watermark, row.panel, rows, row.filters or {},
-                      row.export_format)
+                      row.export_format, row.include_detail)
         ext = "csv" if row.export_format == "csv" else "xlsx"
         key = f"dash-exports/{row.org_id}/{row.id}.{ext}"
         get_storage().put(key, data)
@@ -58,7 +58,8 @@ def _generate(session, row: DashExport) -> None:
                      resource_id=str(row.id), org_id=row.org_id,
                      site_id=row.site_id,
                      detail={"watermark": watermark, "file_key": key,
-                             "rows": len(rows)})
+                             "rows": len(rows),
+                             "include_detail": row.include_detail})
     except Exception as exc:  # noqa: BLE001 - worker must record and continue
         row.status = "failed"
         row.error = str(exc)[:500]

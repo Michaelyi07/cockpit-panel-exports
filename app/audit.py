@@ -19,7 +19,7 @@ class AuditSink:
         session.add(AuditLog(
             org_id=org_id, site_id=site_id, actor=actor, action=action,
             resource_type=RESOURCE_TYPE, resource_id=resource_id,
-            detail=detail or {},
+            detail=detail or {}, created_by=actor,
         ))
 
 

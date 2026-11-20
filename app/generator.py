@@ -18,6 +18,18 @@ from .panels import METRIC_MODE, PANEL_METRICS
 
 WATERMARK_HEADER_PREFIX = "Watermark:"
 
+# Detail-list worksheet (only present for approved include_detail exports).
+# Fictional roster data — no real enterprise/employee information is used.
+DETAIL_SHEET_NAME = "Detail List"
+DETAIL_HEADERS = ["entity_type", "entity_id", "entity_name", "site_id", "note"]
+FICTIONAL_DETAIL_ROWS = [
+    ["enterprise", "ENT-0001", "示例科技（虚构）有限公司", "SITE-A", "demo record"],
+    ["enterprise", "ENT-0002", "海纳商贸（虚构）有限公司", "SITE-B", "demo record"],
+    ["employee", "EMP-0001", "张三（虚构）", "SITE-A", "demo record"],
+    ["employee", "EMP-0002", "李四（虚构）", "SITE-A", "demo record"],
+    ["employee", "EMP-0003", "王五（虚构）", "SITE-B", "demo record"],
+]
+
 
 def _tz() -> ZoneInfo:
     return ZoneInfo(config.TIMEZONE)
@@ -91,7 +103,8 @@ def _caliber_rows(panel: str, rows: list[dict], filters: dict) -> list[list[str]
     return out
 
 
-def render_xlsx(watermark: str, panel: str, rows: list[dict], filters: dict) -> bytes:
+def render_xlsx(watermark: str, panel: str, rows: list[dict], filters: dict,
+                include_detail: bool = False) -> bytes:
     wb = Workbook()
     data = wb.active
     data.title = "Panel Data"
@@ -112,6 +125,21 @@ def render_xlsx(watermark: str, panel: str, rows: list[dict], filters: dict) -> 
         for c_idx, cell_value in enumerate(row, start=1):
             caliber.cell(row=r_idx, column=c_idx, value=cell_value)
 
+    # detail roster is only embedded after approval; aggregates-only exports
+    # never contain enterprise/employee rows.
+    if include_detail:
+        detail = wb.create_sheet(DETAIL_SHEET_NAME)
+        detail.cell(row=1, column=1, value=f"{WATERMARK_HEADER_PREFIX} {watermark}")
+        for col, name in enumerate(DETAIL_HEADERS, start=1):
+            detail.cell(row=2, column=col, value=name)
+        for i, record in enumerate(FICTIONAL_DETAIL_ROWS, start=3):
+            for col, value in enumerate(record, start=1):
+                detail.cell(row=i, column=col, value=value)
+
+    # watermark in the print header of every sheet (per brief)
+    for sheet in wb.worksheets:
+        sheet.oddHeader.center.text = watermark
+
     # workbook properties carry the watermark (file attributes, per brief)
     wb.properties.title = watermark
     wb.properties.keywords = watermark
@@ -122,7 +150,8 @@ def render_xlsx(watermark: str, panel: str, rows: list[dict], filters: dict) -> 
     return buf.getvalue()
 
 
-def render_csv(watermark: str, panel: str, rows: list[dict], filters: dict) -> bytes:
+def render_csv(watermark: str, panel: str, rows: list[dict], filters: dict,
+               include_detail: bool = False) -> bytes:
     """CSV fallback for simple panels: caliber + watermark live in comment
     headers (CSV has no sheet structure)."""
     lines = [f"# {WATERMARK_HEADER_PREFIX} {watermark}"]
@@ -134,11 +163,15 @@ def render_csv(watermark: str, panel: str, rows: list[dict], filters: dict) -> b
             r["metric_code"], r["period"],
             json.dumps(r["dimension"], sort_keys=True), str(r["value"]),
         ]))
+    if include_detail:
+        lines.append("# detail: " + " | ".join(DETAIL_HEADERS))
+        for record in FICTIONAL_DETAIL_ROWS:
+            lines.append("# detail: " + " | ".join(str(c) for c in record))
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
 def render(watermark: str, panel: str, rows: list[dict], filters: dict,
-           export_format: str = "xlsx") -> bytes:
+           export_format: str = "xlsx", include_detail: bool = False) -> bytes:
     if export_format == "csv":
-        return render_csv(watermark, panel, rows, filters)
-    return render_xlsx(watermark, panel, rows, filters)
+        return render_csv(watermark, panel, rows, filters, include_detail)
+    return render_xlsx(watermark, panel, rows, filters, include_detail)

@@ -1,0 +1,17 @@
+INFO:     Started server process [6440]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8801 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52347 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52421 - "POST /api/dash/exports HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52423 - "GET /api/dash/exports/80a4cccf-e7db-401e-b7ec-df6dd6df9ffe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52424 - "POST /api/dash/exports HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52427 - "GET /api/dash/exports/9e6e8074-0f23-4c2e-8795-e07a211b2ebf HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52428 - "GET /files/dash-exports/00000000-0000-0000-0000-0000000000aa/80a4cccf-e7db-401e-b7ec-df6dd6df9ffe.xlsx?expires=1795225751&sig=37df3fcf06d7074c0e6ee848176035e3c58fafc7c415d068d34a4221ca3eec7a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52429 - "GET /files/dash-exports/00000000-0000-0000-0000-0000000000aa/9e6e8074-0f23-4c2e-8795-e07a211b2ebf.xlsx?expires=1795225757&sig=b174db8ba7ce2da550aa50605d1b156da669a3b213a44794926e9ad5140b87dc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52433 - "POST /api/dash/exports HTTP/1.1" 201 Created
+INFO:     127.0.0.1:52442 - "GET /api/dash/exports/705b78f3-ad00-4e5b-b478-4facb407b326 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52443 - "POST /api/dash/exports/705b78f3-ad00-4e5b-b478-4facb407b326/approve HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:52444 - "POST /api/dash/exports/705b78f3-ad00-4e5b-b478-4facb407b326/approve HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52445 - "GET /api/dash/exports/705b78f3-ad00-4e5b-b478-4facb407b326 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52446 - "GET /api/dash/exports/80a4cccf-e7db-401e-b7ec-df6dd6df9ffe HTTP/1.1" 200 OK

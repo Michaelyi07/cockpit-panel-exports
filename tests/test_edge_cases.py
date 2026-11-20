@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.models import AuditLog
 from app.worker import process_pending
 
-from tests.conftest import ANALYST
+from tests.conftest import ANALYST, MANAGER
 
 
 def test_anonymous_create_returns_401(client):
@@ -33,6 +33,35 @@ def test_bad_filter_date_rejected(client):
         "panel": "occupancy", "filters": {"date_from": "not-a-date"}},
         headers=ANALYST)
     assert resp.status_code == 422
+
+
+def test_invalid_site_id_returns_422_not_500(client):
+    resp = client.post("/api/dash/exports", json={
+        "panel": "occupancy", "filters": {"site_id": "not-a-uuid"}},
+        headers=ANALYST)
+    assert resp.status_code == 422
+
+
+def test_admin_cannot_approve_rejects_and_failed_not_reapprovable(client):
+    """Approval is ops_manager-only; admin cannot approve; and a failed export
+    cannot be re-approved (status whitelist)."""
+    from app.db import SessionLocal
+    from app.models import DashExport
+
+    resp = client.post("/api/dash/exports", json={
+        "panel": "revenue", "include_detail": True,
+        "filters": {"site_id": "00000000-0000-0000-0000-000000000001"}},
+        headers=ANALYST)
+    eid = resp.json()["id"]
+    # admin is not an approver
+    assert client.post(f"/api/dash/exports/{eid}/approve", headers={
+        "X-User-Id": "admin-1", "X-Role": "admin"}).status_code == 403
+    # force status=failed, then approve must be rejected
+    with SessionLocal() as session:
+        row = session.get(DashExport, __import__("uuid").UUID(eid))
+        row.status = "failed"
+        session.commit()
+    assert client.post(f"/api/dash/exports/{eid}/approve", headers=MANAGER).status_code == 409
 
 
 def test_unknown_site_filter_yields_empty_data_sheet(client):

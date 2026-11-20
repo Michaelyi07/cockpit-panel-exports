@@ -4,7 +4,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must set POSTGRES_PASSWORD}
       POSTGRES_DB: dash_exports_1855
     ports:
       - "5434:5432"
@@ -17,9 +17,9 @@ services:
   app:
     build: .
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres@db:5432/dash_exports_1855
+      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:?must set POSTGRES_PASSWORD}@db:5432/dash_exports_1855
       STORAGE_DIR: /data/storage
-      LINK_SECRET: change-me-in-production
+      LINK_SECRET: ${LINK_SECRET:?must set LINK_SECRET before docker compose up}
       LINK_TTL_SECONDS: "86400"
       WORKER_ENABLED: "true"
     ports:

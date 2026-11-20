@@ -40,14 +40,25 @@ def get_actor(x_user_id: str | None = Header(default=None),
 
 
 def _require_ops_manager(actor: tuple[str, str]) -> str:
+    """Approval is restricted to the ops_manager role per the brief; admin is
+    intentionally NOT allowed to self-escalate into the approval gate."""
     user, role = actor
-    if role != ROLE_OPS_MANAGER and role != "admin":
+    if role != ROLE_OPS_MANAGER:
         raise HTTPException(status_code=403, detail="ops_manager role required")
     return user
 
 
-def _get_export(session: Session, export_id: uuid.UUID) -> DashExport:
-    row = session.get(DashExport, export_id)
+def _get_export(session: Session, export_id: uuid.UUID,
+                for_update: bool = False) -> DashExport:
+    if for_update:
+        row = session.execute(
+            select(DashExport)
+            .where(DashExport.id == export_id,
+                   DashExport.deleted_at.is_(None))
+            .with_for_update()
+        ).scalar_one_or_none()
+    else:
+        row = session.get(DashExport, export_id)
     if row is None or row.deleted_at is not None:
         raise HTTPException(status_code=404, detail="export not found")
     return row
@@ -63,11 +74,17 @@ def create_export(payload: ExportCreate, session: Session = Depends(get_session)
     if payload.panel not in _KNOWN:
         raise HTTPException(status_code=422, detail="unknown panel")
 
+    # site_id must be a UUID; reject bad input with 422 instead of a 500.
+    try:
+        site_id = (uuid.UUID(str(payload.filters["site_id"]))
+                   if payload.filters.get("site_id") else None)
+    except (ValueError, AttributeError, TypeError):
+        raise HTTPException(status_code=422, detail="filters.site_id must be a UUID")
+
     status = "pending_approval" if payload.include_detail else "queued"
     row = DashExport(
         org_id=uuid.UUID("00000000-0000-0000-0000-0000000000aa"),
-        site_id=(uuid.UUID(payload.filters["site_id"])
-                 if payload.filters.get("site_id") else None),
+        site_id=site_id,
         panel=payload.panel,
         filters=payload.filters or {},
         include_detail=payload.include_detail,
@@ -122,11 +139,12 @@ def export_detail(export_id: uuid.UUID, session: Session = Depends(get_session),
 def approve_export(export_id: uuid.UUID, session: Session = Depends(get_session),
                    actor: tuple[str, str] = Depends(get_actor)):
     approver = _require_ops_manager(actor)
-    row = _get_export(session, export_id)
-    if row.status == "rejected":
-        raise HTTPException(status_code=409, detail="export already rejected")
-    if row.status in ("queued", "running", "succeeded"):
-        raise HTTPException(status_code=409, detail="export already approved or past approval")
+    row = _get_export(session, export_id, for_update=True)
+    # whitelist: only pending_approval may be approved — covers failed/rejected/
+    # queued/running/succeeded alike and blocks re-approval of a failed export.
+    if row.status != "pending_approval":
+        raise HTTPException(status_code=409,
+                            detail=f"export not approvable from status {row.status}")
     if approver == row.created_by:
         raise HTTPException(status_code=403, detail="creator cannot approve own export")
     row.status = "queued"
@@ -145,9 +163,11 @@ def reject_export(export_id: uuid.UUID, payload: RejectCreate,
                   session: Session = Depends(get_session),
                   actor: tuple[str, str] = Depends(get_actor)):
     rejector = _require_ops_manager(actor)
-    row = _get_export(session, export_id)
+    row = _get_export(session, export_id, for_update=True)
     if row.status != "pending_approval":
         raise HTTPException(status_code=409, detail="only pending_approval can be rejected")
+    if rejector == row.created_by:
+        raise HTTPException(status_code=403, detail="creator cannot reject own export")
     row.status = "rejected"
     row.rejected_by = rejector
     row.rejected_reason = payload.reason

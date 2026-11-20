@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    config.enforce_secrets()  # refuse to start without LINK_SECRET
     app = FastAPI(title="Dash Exports (S3-DASH-004)", version="1.0.0",
                   lifespan=lifespan)
     app.include_router(router)

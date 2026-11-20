@@ -85,6 +85,35 @@ def test_caliber_versions_consistent(client):
     assert len(versions) == 1  # single caliber version across the report
 
 
+def test_csv_detail_export_contains_detail_after_approval(client):
+    """CSV + include_detail: approved file carries the fictional detail roster
+    (as comment lines, since CSV has no worksheets); aggregates-only does not."""
+    from tests.conftest import MANAGER
+
+    resp = client.post("/api/dash/exports", json={
+        "panel": "revenue", "include_detail": True, "export_format": "csv",
+        "filters": {"site_id": "00000000-0000-0000-0000-000000000001"}},
+        headers=_hdr())
+    export = resp.json()
+    assert export["status"] == "pending_approval"
+    client.post(f"/api/dash/exports/{export['id']}/approve", headers=MANAGER)
+    assert process_pending() >= 1
+    detail = client.get(f"/api/dash/exports/{export['id']}", headers=_hdr()).json()
+    data = client.get(detail["download_url"]).content.decode("utf-8")
+    assert "# detail: entity_type" in data
+    assert "enterprise" in data and "employee" in data
+
+    # aggregates-only CSV has no detail lines
+    resp2 = client.post("/api/dash/exports", json={
+        "panel": "revenue", "include_detail": False, "export_format": "csv",
+        "filters": {"site_id": "00000000-0000-0000-0000-000000000001"}},
+        headers=_hdr())
+    process_pending()
+    d2 = client.get(f"/api/dash/exports/{resp2.json()['id']}", headers=_hdr()).json()
+    data2 = client.get(d2["download_url"]).content.decode("utf-8")
+    assert "# detail:" not in data2
+
+
 def test_csv_fallback_contains_caliber_and_watermark(client):
     detail = _succeeded(client, payload={
         "panel": "leads", "export_format": "csv",

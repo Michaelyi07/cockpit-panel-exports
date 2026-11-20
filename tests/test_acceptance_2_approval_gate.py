@@ -4,6 +4,10 @@ the export is not approved. Aggregates-only bypass the gate; reject path never
 produces a file either."""
 from __future__ import annotations
 
+import io
+
+from openpyxl import load_workbook
+
 from app.worker import process_pending
 
 from tests.conftest import ANALYST, MANAGER
@@ -87,6 +91,47 @@ def test_creator_cannot_approve_own_export(client):
     denied = client.post(f"/api/dash/exports/{export['id']}/approve",
                          headers={"X-User-Id": "manager-2", "X-Role": "ops_manager"})
     assert denied.status_code == 403  # creator self-approval blocked
+
+
+def test_approved_detail_file_contains_detail_rows(client):
+    """After approval the generated file must actually carry the detail
+    roster (enterprises/employees), not just a copy of the aggregate export."""
+    from app.generator import DETAIL_SHEET_NAME
+
+    resp = client.post("/api/dash/exports", json={
+        "panel": "revenue", "include_detail": True,
+        "filters": {"site_id": "00000000-0000-0000-0000-000000000001"}},
+        headers=ANALYST)
+    export = resp.json()
+    client.post(f"/api/dash/exports/{export['id']}/approve", headers=MANAGER)
+    process_pending()
+
+    detail = client.get(f"/api/dash/exports/{export['id']}", headers=ANALYST).json()
+    assert detail["status"] == "succeeded"
+    wb = load_workbook(io.BytesIO(client.get(detail["download_url"]).content))
+    assert DETAIL_SHEET_NAME in wb.sheetnames
+    sheet = wb[DETAIL_SHEET_NAME]
+    kinds = {sheet.cell(row=r, column=1).value
+             for r in range(3, sheet.max_row + 1)}
+    assert {"enterprise", "employee"} <= kinds  # real detail rows present
+
+
+def test_aggregate_file_has_no_detail_sheet(client):
+    """include_detail=false must NOT leak the detail roster into the file."""
+    from app.generator import DETAIL_SHEET_NAME
+
+    resp = client.post("/api/dash/exports", json={
+        "panel": "revenue", "include_detail": False,
+        "filters": {"site_id": "00000000-0000-0000-0000-000000000001"}},
+        headers=ANALYST)
+    export = resp.json()
+    process_pending()
+
+    detail = client.get(f"/api/dash/exports/{export['id']}", headers=ANALYST).json()
+    assert detail["status"] == "succeeded"
+    wb = load_workbook(io.BytesIO(client.get(detail["download_url"]).content))
+    assert DETAIL_SHEET_NAME not in wb.sheetnames
+    assert wb.sheetnames == ["Panel Data", "Caliber"]
 
 
 def test_approve_requires_ops_manager_role(client):

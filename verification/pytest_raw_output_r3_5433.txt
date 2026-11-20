@@ -1,0 +1,62 @@
+C:\Users\Administrator\.workbuddy\binaries\python\versions\3.13.12\Lib\site-packages\pytest_asyncio\plugin.py:306: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session". Set it to "fixture-scope" to keep the current behavior.
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.2.0, pluggy-1.7.0 -- C:\Users\Administrator\.workbuddy\binaries\python\versions\3.13.12\python.exe
+cachedir: .pytest_cache
+rootdir: D:\WorkBuddyProjects\clawhunt\deliverables\1855-dash-exports
+configfile: pytest.ini
+plugins: anyio-4.16.0, platformdirs-4.14.5, asyncio-1.5.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 40 items
+
+tests/test_acceptance_1_xlsx_sheets.py::test_xlsx_has_panel_data_and_caliber_sheets PASSED [  2%]
+tests/test_acceptance_1_xlsx_sheets.py::test_data_end_time_reflects_dataset PASSED [  5%]
+tests/test_acceptance_1_xlsx_sheets.py::test_caliber_versions_consistent PASSED [  7%]
+tests/test_acceptance_1_xlsx_sheets.py::test_csv_detail_export_contains_detail_after_approval PASSED [ 10%]
+tests/test_acceptance_1_xlsx_sheets.py::test_csv_fallback_contains_caliber_and_watermark PASSED [ 12%]
+tests/test_acceptance_2_approval_gate.py::test_detail_export_pending_approval_generates_no_file PASSED [ 15%]
+tests/test_acceptance_2_approval_gate.py::test_aggregates_only_export_bypasses_gate PASSED [ 17%]
+tests/test_acceptance_2_approval_gate.py::test_approve_then_generate_file PASSED [ 20%]
+tests/test_acceptance_2_approval_gate.py::test_reject_never_generates_file PASSED [ 22%]
+tests/test_acceptance_2_approval_gate.py::test_creator_cannot_approve_own_export PASSED [ 25%]
+tests/test_acceptance_2_approval_gate.py::test_approved_detail_file_contains_detail_rows PASSED [ 27%]
+tests/test_acceptance_2_approval_gate.py::test_aggregate_file_has_no_detail_sheet PASSED [ 30%]
+tests/test_acceptance_2_approval_gate.py::test_approve_requires_ops_manager_role PASSED [ 32%]
+tests/test_acceptance_3_watermark.py::test_watermarks_unique_across_exports PASSED [ 35%]
+tests/test_acceptance_3_watermark.py::test_watermark_written_to_workbook_properties PASSED [ 37%]
+tests/test_acceptance_3_watermark.py::test_watermark_written_to_every_sheet_header PASSED [ 40%]
+tests/test_acceptance_3_watermark.py::test_watermark_written_to_print_header_when_detail_sheet_present PASSED [ 42%]
+tests/test_acceptance_3_watermark.py::test_duplicate_watermark_rejected_by_db_index PASSED [ 45%]
+tests/test_acceptance_3_watermark.py::test_generate_watermark_retries_on_collision PASSED [ 47%]
+tests/test_acceptance_4_link_audit.py::test_link_issuance_writes_audit_row_per_request PASSED [ 50%]
+tests/test_acceptance_4_link_audit.py::test_valid_link_downloads_file PASSED [ 52%]
+tests/test_acceptance_4_link_audit.py::test_expired_link_returns_410_with_hint PASSED [ 55%]
+tests/test_acceptance_4_link_audit.py::test_tampered_signature_rejected PASSED [ 57%]
+tests/test_acceptance_4_link_audit.py::test_link_ttl_is_24h PASSED       [ 60%]
+tests/test_acceptance_4_link_audit.py::test_status_endpoint_gives_fresh_link_after_expiry PASSED [ 62%]
+tests/test_config_secret.py::test_required_env_rejects_missing PASSED    [ 65%]
+tests/test_config_secret.py::test_service_start_without_link_secret_refuses PASSED [ 67%]
+tests/test_config_secret.py::test_service_start_with_link_secret_succeeds PASSED [ 70%]
+tests/test_config_secret.py::test_import_config_without_secret_still_works PASSED [ 72%]
+tests/test_edge_cases.py::test_anonymous_create_returns_401 PASSED       [ 75%]
+tests/test_edge_cases.py::test_unknown_role_returns_403 PASSED           [ 77%]
+tests/test_edge_cases.py::test_unknown_panel_rejected PASSED             [ 80%]
+tests/test_edge_cases.py::test_bad_filter_date_rejected PASSED           [ 82%]
+tests/test_edge_cases.py::test_invalid_site_id_returns_422_not_500 PASSED [ 85%]
+tests/test_edge_cases.py::test_admin_cannot_approve_rejects_and_failed_not_reapprovable PASSED [ 87%]
+tests/test_edge_cases.py::test_unknown_site_filter_yields_empty_data_sheet PASSED [ 90%]
+tests/test_edge_cases.py::test_list_filters_by_status PASSED             [ 92%]
+tests/test_edge_cases.py::test_worker_processes_all_queued_in_batch PASSED [ 95%]
+tests/test_edge_cases.py::test_every_export_event_audited PASSED         [ 97%]
+tests/test_edge_cases.py::test_generate_failure_recorded PASSED          [100%]
+
+============================== warnings summary ===============================
+C:\Users\Administrator\.workbuddy\binaries\python\versions\3.13.12\Lib\site-packages\alembic\config.py:604
+C:\Users\Administrator\.workbuddy\binaries\python\versions\3.13.12\Lib\site-packages\alembic\config.py:604
+  C:\Users\Administrator\.workbuddy\binaries\python\versions\3.13.12\Lib\site-packages\alembic\config.py:604: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.
+    util.warn_deprecated(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 40 passed, 2 warnings in 17.31s =======================

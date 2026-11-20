@@ -17,12 +17,15 @@ from .models import DashExport
 MAX_ATTEMPTS = 5
 
 
-def generate_watermark(session: Session, org_id) -> str:
+def generate_watermark(session: Session, org_id=None) -> str:
+    """org_id is kept for call-site compatibility; uniqueness is global."""
     for _ in range(MAX_ATTEMPTS):
         wm = f"WM-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:8]}"
+        # global check: the DB unique index is global (not per-org), so the
+        # generator must match that scope or a cross-org hex collision would
+        # pass here and then fail at insert time.
         exists = session.scalar(
             select(DashExport.id).where(
-                DashExport.org_id == org_id,
                 DashExport.watermark == wm,
                 DashExport.deleted_at.is_(None),
             )
