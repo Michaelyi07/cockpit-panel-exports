@@ -1,0 +1,2 @@
+ PostgreSQL 16.9, compiled by Visual C++ build 1943, 64-bit
+

@@ -3,4 +3,3 @@ __pycache__/
 *.pyc
 storage/
 .pytest_cache/
-verification/
